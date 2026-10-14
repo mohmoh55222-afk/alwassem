@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>AL WASEEM</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#070b24">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="AL WASEEM">
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
 --bg:#070b24;--card:#12183a;--tx:#eef0ff;--mut:#9aa3d6;--pri:#8b5cf6;--gold:#f5c542;--line:#2a3366}
@@ -99,7 +106,7 @@ input{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);ba
 .gpv{flex:1;display:flex;align-items:center;gap:10px;background:#ffffff10;border:1px solid #ffffff1c;border-radius:16px;padding:8px 12px;min-width:0}
 .g3d.sm{font-size:30px;transform:none}
 .gprice{color:#fde68a;font-size:13px}
-.gsend{border:0;border-radius:16px;padding:14px 22px;background:linear-gradient(90deg,#06b6d4,#8b5cf6);color:#fff;font-weight:900;font-size:16px;cursor:pointer}
+.gsend{border:0;border-radius:16px;padding:14px 22px;background:linear-gradient(90deg,#ec4899,#f472b6);color:#fff;font-weight:900;font-size:16px;cursor:pointer}
 .gsend:disabled{opacity:.4}
 .ggo{margin-inline-start:auto;border:0;border-radius:18px;background:#fff;color:#7c3aed;font-weight:900;padding:8px 14px;cursor:pointer;flex:none}
 .gtx{flex:1}
@@ -573,6 +580,9 @@ textarea{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line)
 
 .gfx-blend{position:fixed;inset:0;z-index:26;mix-blend-mode:screen;pointer-events:none;display:flex;align-items:center;justify-content:center}
 .gfx-blend video{max-width:94vw;max-height:72vh;object-fit:contain}
+.pc{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:50%;background:#22c55e;color:#fff;font-size:11px;font-weight:900;margin-inline-start:6px;vertical-align:middle;padding:0 3px}
+.pcb{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;border-radius:9px;background:#22c55e;color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.entryb{position:fixed;top:calc(env(safe-area-inset-top,0px) + 78px);left:50%;transform:translateX(-50%);z-index:30;background:linear-gradient(90deg,#8b5cf6,#ec4899);color:#fff;border-radius:999px;padding:7px 16px;font-size:13px;font-weight:800;box-shadow:0 4px 14px #0008;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -763,7 +773,7 @@ const grad=id=>{let h=0;for(const c of id)h=(h*31+c.charCodeAt(0))%360;return "l
 function rcard(r,mine){
   const d=el("div","rcard"+(mine?" mine":"")); d.style.background=grad(r.id);
   if(mine) d.append(el("span","own","⭐ مالك"));
-  d.append(el("div","big",r.photo?"":(r.emoji||"🎙️")),el("span","num","#"+(r.num||r.id.slice(0,5))),el("div","rn",(r.pin?"🔒 ":"")+r.name));
+  d.append(el("div","big",r.photo?"":(r.emoji||"🎙️")),el("span","num","#"+(r.num||r.id.slice(0,5))),rnWith(r));
   if(r.photo){d.style.backgroundImage="linear-gradient(#0002,#0007),url("+r.photo+")";d.style.backgroundSize="cover";d.style.backgroundPosition="center";}
   d.onclick=()=>enterRoom(r); return d;
 }
@@ -808,7 +818,7 @@ async function userLookup(v,box,actionsFn){
   const row=el("div","row"); actionsFn(d.id,p).forEach(b=>row.append(b)); box.append(row);
 }
 function renderRooms(a){
-  q=""; const sr=el("div","srow"), sbx=searchBar("اسم الغرفة أو رقمها…",v=>showRoomResults(v),()=>showRoomResults(""));
+  startPres(); q=""; const sr=el("div","srow"), sbx=searchBar("اسم الغرفة أو رقمها…",v=>showRoomResults(v),()=>showRoomResults(""));
   const plus=el("button","plus","+"); plus.onclick=openCreate; sr.append(sbx.w,plus); a.append(sr); const rres=el("div"); rres.id="rres"; a.append(rres);
   const ch=el("div","chips");
   [["all","🌐 الكل"],["fav","⭐ المتابعة"],["chat","💬 دردشة"],["music","🎵 موسيقى"],["games","🎮 ألعاب"]].forEach(([k,t])=>{
@@ -922,7 +932,7 @@ function renderProfile(a){
   const go=t=>()=>{tab=t;render()};
   [...(OWNER?[["👑","#facc15","لوحة المالك",sheetOwner]]:[]),["🎨","#a78bfa","اختيار من الصور الجاهزة",()=>presetSheet(256,256,async u=>{ await saveProf({photo:u}); render(); })],["🖼️","#34d399","تغيير الصورة من الاستوديو",()=>file.click()],["✏️","#f59e0b","تغيير الاسم والرمز",sheetName],["📝","#38bdf8","تعديل النبذة التعريفية",sheetBio],["🎨","#c084fc","تغيير خلفية البروفايل",sheetTheme],
    ["✨","#f472b6","متجر الإطارات والشارات",go("shop")],["🚪","#34d399","مؤثرات الدخول",go("shop")],["👛","#facc15","المحفظة وشحن العملات",sheetWallet],
-   ["🔊","#38bdf8",soundOn?"صوت النقر: تشغيل":"صوت النقر: إيقاف",()=>{ soundOn=!soundOn; try{localStorage.setItem("wsm_snd",soundOn?"1":"0")}catch(e){} render(); if(soundOn) sndClick(); }],["🔒","#ef4444","تسجيل الخروج",logout]].forEach(([i,c,t,fn])=>{
+   ["🔊","#38bdf8",soundOn?"صوت النقر: تشغيل":"صوت النقر: إيقاف",()=>{ soundOn=!soundOn; try{localStorage.setItem("wsm_snd",soundOn?"1":"0")}catch(e){} render(); if(soundOn) sndClick(); }],["📲","#22c55e","تثبيت التطبيق على الشاشة",()=>window.__install?window.__install():alert("افتح التطبيق من Chrome ثم اضغط ⋮ واختر تثبيت التطبيق")],["🔒","#ef4444","تسجيل الخروج",logout]].forEach(([i,c,t,fn])=>{
     const r=el("button","srow2"+(i==="🔒"?" out":"")), ic=el("span","sic",i); ic.style.background=c+"33";
     r.append(ic,el("span","stx",t),el("span","chev","‹")); r.onclick=fn; a.append(r)});
 }
@@ -981,15 +991,37 @@ let seats={},unsubSeats=null,micMuted=false;
 const hueOf=id=>{let h=0;for(const c of id)h=(h*31+c.charCodeAt(0))%360;return h};
 const fmt=n=>n>=1e6?(n/1e6).toFixed(1)+"M":n>=1e3?(n/1e3).toFixed(1)+"K":String(n);
 const seatRef=i=>db.doc("rooms/"+room.id+"/seats/"+i);
+let unsubPres=null, presDocs=[], presFirst=true, presHB=null;
+const presLive=()=>presDocs.filter(p=>p.t>Date.now()-90000);
+const presIn=rid=>presLive().filter(p=>p.room===rid);
+function entryBanner(n){ const b=el("div","entryb","✨ دخل "+n+" الغرفة"); document.body.append(b); setTimeout(()=>b.remove(),2000); }
+function startPres(){ if(unsubPres||!db) return;
+  unsubPres=db.collection("presence").onSnapshot(sn=>{ presDocs=sn.docs.map(d=>d.data());
+    if(!presFirst) sn.docChanges().forEach(c=>{ if(c.type!=="added") return; const q=c.doc.data(); if(room&&q.room===room.id&&q.uid!==uid&&Date.now()-q.t<20000) entryBanner(q.name||"مستخدم"); });
+    presFirst=false; presPaint(); });
+  setInterval(presPaint,30000); }
+function presPaint(){ document.querySelectorAll(".pc").forEach(x=>{ x.textContent=String(presIn(x.dataset.r).length); });
+  const n=document.getElementById("pcnt"); if(n&&room) n.textContent=String(presIn(room.id).length);
+  const sh=document.getElementById("pshl"); if(sh&&room) presFill(sh); }
+function presSet(){ if(!room||!uid) return; db.doc("presence/"+uid).set({uid:uid,name:prof.name||"",pid:prof.pid||0,room:room.id,t:Date.now()}).catch(()=>{}); }
+function presOn(){ presSet(); clearInterval(presHB); presHB=setInterval(presSet,30000); }
+function presOff(){ clearInterval(presHB); presHB=null; if(uid&&db) db.doc("presence/"+uid).delete().catch(()=>{}); }
+window.addEventListener("pagehide",()=>{ if(room) presOff(); });
+function presFill(L){ L.innerHTML=""; const arr=room?presIn(room.id):[]; if(!arr.length){ L.append(el("p","mut","لا أحد الآن")); return; }
+  arr.forEach(q=>{ const P=PROFS[q.uid]||{}; const r=el("div","room"); const av=el("div","av"); av.style.cssText="width:40px;height:40px;font-size:20px"; setAv(av,P.emoji||"🙂",P.photo);
+    const i=el("div"); i.append(el("b",null,q.name||P.name||"مستخدم"),el("div","mut","ID #"+(P.pid||q.pid||""))); r.append(frameWrap(av,P.frame,2),i); L.append(r); }); }
+function presSheet(){ const o=el("div","ov"), c=el("div","card sheet"); c.append(el("b",null,"الموجودون في الغرفة")); const L=el("div"); L.id="pshl"; c.append(L);
+  const x=el("button","btn alt full","إغلاق"); x.style.marginTop="8px"; x.onclick=()=>o.remove(); c.append(x); o.append(c); o.onclick=e=>{ if(e.target===o) o.remove(); }; document.body.append(o); presFill(L); }
+function rnWith(r){ const x=el("div","rn",(r.pin?"🔒 ":"")+r.name); const pc=el("span","pc",String(presIn(r.id).length)); pc.dataset.r=r.id; x.append(pc); return x; }
 function openRoom(r){
   room=r; msgs=[]; seats={}; micMuted=false; topRows=[]; topList=[]; topRank={}; joinT=Date.now()-1500;
   unsubMsgs=db.collection("rooms/"+r.id+"/msgs").where("t",">=",joinT).orderBy("t","asc").limit(300).onSnapshot(s=>{msgs=s.docs.map(d=>d.data()).filter(m=>m.t>=joinT); drawChat();});
-  unsubTop=db.collection("rooms/"+r.id+"/msgs").where("type","==","gift").where("t",">=",weekStart()).limit(1000).onSnapshot(sn=>{ topRows=sn.docs.map(d=>d.data()); drawChat(); });
+  unsubTop=db.collection("gift_log").where("t",">=",weekStart()).limit(3000).onSnapshot(sn=>{ topRows=sn.docs.map(d=>d.data()); drawChat(); });
   unsubSeats=db.collection("rooms/"+r.id+"/seats").onSnapshot(s=>{seats={}; s.docs.forEach(d=>seats[d.id]=d.data()); drawSeats();});
   unsubRoomDoc=db.doc("rooms/"+r.id).onSnapshot(sn=>{ if(!room||room.id!==r.id) return; if(!sn.exists){ toast("تم حذف الغرفة"); closeRoom(); return; } const v=document.getElementById("mi"), val=v?v.value:""; room={...room,...sn.data(),id:r.id}; render(); const n=document.getElementById("mi"); if(n) n.value=val; });
-  render(); finalizeTops(r);
+  render(); finalizeTops(r); startPres(); presOn();
 }
-function closeRoom(){ musStop(); MUS={id:null,t0:0,on:false}; if(unsubTop){ unsubTop(); unsubTop=null; } topRows=[]; topList=[]; topRank={}; if(unsubMsgs) unsubMsgs(); if(unsubSeats) unsubSeats(); if(unsubRoomDoc) unsubRoomDoc(); room=null; render(); }
+function closeRoom(){ presOff(); musStop(); MUS={id:null,t0:0,on:false}; if(unsubTop){ unsubTop(); unsubTop=null; } topRows=[]; topList=[]; topRank={}; if(unsubMsgs) unsubMsgs(); if(unsubSeats) unsubSeats(); if(unsubRoomDoc) unsubRoomDoc(); room=null; render(); }
 function mySeat(){return Object.keys(seats).find(k=>seats[k].uid===uid)}
 function drawSeats(){
   const g=document.getElementById("seatsg"); if(!g) return; g.innerHTML="";
@@ -1105,6 +1137,7 @@ const FXI={rose:["petals","hearts"],heart:["hearts","sparkle"],clap:["sparkle","
 function recipients(){
   const m=new Map(); m.set(room.owner,{uid:room.owner,name:room.ownerName,emoji:room.emoji||"🎙️",photo:room.photo||""});
   Object.values(seats).forEach(sd=>{ if(!m.has(sd.uid)) m.set(sd.uid,{uid:sd.uid,name:sd.name,emoji:sd.emoji,photo:sd.photo||""}); });
+  presIn(room.id).forEach(q=>{ if(q.uid===uid||m.has(q.uid)) return; const P=PROFS[q.uid]||{}; m.set(q.uid,{uid:q.uid,name:q.name||P.name||"مستخدم",emoji:P.emoji||"🙂",photo:P.photo||""}); });
   return [...m.values()];
 }
 function openGifts(){
@@ -1142,16 +1175,18 @@ function openGifts(){
     send.onclick=async()=>{
       if(!pick||sending) return; const g=pick, targets=rc.filter(r=>sel.has(r.uid)), total=g[2]*qty*targets.length, label=labelOf();
       if(coins<total) return toast(OWNER?"رصيد محفظة الحساب لا يكفي — اسحب من المحفظة الرئيسية":"رصيدك لا يكفي");
-      sending=true; send.disabled=true; let rec=null;
+      sending=true; send.disabled=true; let rec=null; const before=coins, per=g[2]*qty, sh=r2(per*.03), n=targets.length;
+      const msg={type:"gift",uid,emoji:prof.emoji,name:prof.name,amt:total,gid:g[6],qty:qty,text:(prof.badge||"")+prof.name+" أرسل "+g[0]+" "+g[1]+(qty>1?" ×"+qty:"")+(n>1?" إلى "+n+" مستلمين":"")+" إلى "+label,t:Date.now()};
+      o.remove(); toast("تم إرسال الهدية ✓");
       try{
-        rec=await db.collection("rooms/"+room.id+"/msgs").add({type:"gift",uid,emoji:prof.emoji,name:prof.name,amt:total,gid:g[6],qty:qty,text:(prof.badge||"")+prof.name+" أرسل "+g[0]+" "+g[1]+(qty>1?" ×"+qty:"")+(targets.length>1?" إلى "+targets.length+" مستلمين":"")+" إلى "+label,t:Date.now()});
-        const before=coins; try{ await setCoins(before-total); }catch(e){ coins=before; throw e; }
-        const per=g[2]*qty, sh=r2(per*.03);
-        for(const t of targets){ await credit(t.uid,sh,"gift"); await credit(room.owner,sh,"roomshare"); await credit("__app__",r2(per-2*sh),"support"); }
-        if(g[7]===2) await db.collection("gifts_feed").add({fv:prof.verify||"",from:prof.name,to:label,emoji:g[0],name:g[1],gid:g[6],qty:qty,amt:total,k:"",room:room.id,roomName:room.name,t:Date.now()});
-        toast("تم إرسال الهدية ✓"); o.remove();
+        const [a1,b1]=await Promise.allSettled([db.collection("rooms/"+room.id+"/msgs").add(msg),setCoins(before-total)]);
+        if(a1.status==="fulfilled") rec=a1.value;
+        if(a1.status!=="fulfilled"||b1.status!=="fulfilled"){ if(b1.status==="fulfilled"){ try{ await setCoins(before); }catch(_){} } else coins=before; throw new Error("send"); }
+        db.collection("gift_log").add(msg).catch(()=>{});
+        Promise.all([...targets.map(t=>credit(t.uid,sh,"gift")),credit(room.owner,r2(sh*n),"roomshare"),credit("__app__",r2(total-2*sh*n),"support"),
+          g[7]===2?db.collection("gifts_feed").add({fv:prof.verify||"",from:prof.name,to:label,emoji:g[0],name:g[1],gid:g[6],qty:qty,amt:total,k:"",room:room.id,roomName:room.name,t:Date.now()}):null].filter(Boolean)).catch(()=>{});
       }catch(e){ if(rec&&rec.id){ try{ await db.doc("rooms/"+room.id+"/msgs/"+rec.id).delete(); }catch(_){} } toast("تعذر الإرسال — لم تُخصم أي نقاط"); }
-      finally{ sending=false; if(document.body.contains(o)) draw(); }
+      finally{ sending=false; }
     };
     const r1=el("div","gbrow"), r2b=el("div","gbrow"); r1.append(q,snd); r2b.append(pv,prev,send); bar.append(r1,r2b);
     p.append(rr,tr,gr,bar);
@@ -1167,7 +1202,7 @@ function renderRoom(a){
   const gear=el("button","rb","⚙️"); gear.onclick=openSettings;
   const back=el("button","bkb"); back.append(el("small",null,"رجوع"),el("span","bka","→")); back.onclick=closeRoom;
   const crown=starTop(48); crown.classList.add("crown2"); crown.onclick=openBoard;
-  const sb=el("button","rb",giftSndOn?"🔊":"🔇"); sb.title="أصوات الهدايا"; sb.onclick=()=>{ giftSndOn=!giftSndOn; gPref(); sb.textContent=giftSndOn?"🔊":"🔇"; toast(giftSndOn?"أصوات الهدايا: تشغيل":"أصوات الهدايا: كتم"); };
+  const sb=el("button","rb","👥"); sb.title="الموجودون"; sb.style.position="relative"; sb.onclick=presSheet; const pcb=el("span","pcb",String(presIn(room.id).length)); pcb.id="pcnt"; sb.append(pcb);
   t.append(host,el("span","sp"),crown,sb,gear,back);
   const sg=el("div","seatsg"); sg.id="seatsg";
   const mid=el("div","mid"); mid.append(el("div","wm",room.name));
@@ -2240,10 +2275,10 @@ function medalSvg(k,sz,txt){ const c=MEDC[k], id="mg"+k, s=el("span","medal"); s
    +(txt!=null?'<text x="32" y="58" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="22" fill="'+c[3]+'">'+txt+'</text>':'<polygon points="32,37 36.4,45.8 46,47.2 39,54 40.7,63.6 32,59 23.3,63.6 25,54 18,47.2 27.6,45.8" fill="'+c[3]+'" fill-opacity=".85"/>')+'</svg>'; return s; }
 async function ensureWin(u,key){ const ref=db.doc("profiles/"+u), g=await ref.get(); if(!g.exists) return; const arr=g.data().topWeeks||[]; if(arr.includes(key)) return; await ref.update({topWeeks:[...new Set([...arr,key])]}); }
 async function finalizeTops(r){
-  for(let k=1;k<=3;k++){ const pr=periodOf(k), key=r.id+"_"+pr.e;
-    try{ const ref=db.doc("rooms/"+r.id+"/tops/"+pr.e), d=await ref.get(); let w;
+  for(let k=1;k<=3;k++){ const pr=periodOf(k), key="g_"+pr.e;
+    try{ const ref=db.doc("tops_g/"+pr.e), d=await ref.get(); let w;
       if(d.exists) w=d.data();
-      else{ const q=await db.collection("rooms/"+r.id+"/msgs").where("type","==","gift").where("t",">=",pr.s).where("t","<",pr.e).limit(2000).get(), top=calcTopRange(q.docs.map(x=>x.data()),pr.s,pr.e);
+      else{ const q=await db.collection("gift_log").where("t",">=",pr.s).where("t","<",pr.e).limit(5000).get(), top=calcTopRange(q.docs.map(x=>x.data()),pr.s,pr.e);
         w=top[0]?{uid:top[0].uid||"",name:top[0].name,tot:top[0].tot}:{uid:"",name:"",tot:0}; await ref.set({e:pr.e,room:r.id,uid:w.uid,name:w.name,tot:w.tot}); }
       if(w.uid) await ensureWin(w.uid,key);
     }catch(er){} } }
@@ -2401,9 +2436,19 @@ main();
   <button id="gFacebook" style="width:100%;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:10px;background:#1877f2;color:#fff;border:0;border-radius:16px;padding:14px;font-size:16px;font-weight:800;cursor:pointer;opacity:.55">
    <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M24 12a12 12 0 1 0-13.9 11.9v-8.4H7.1V12h3V9.4c0-3 1.8-4.7 4.5-4.7 1.3 0 2.7.2 2.7.2v3h-1.5c-1.5 0-2 .9-2 1.9V12h3.4l-.5 3.5h-2.9v8.4A12 12 0 0 0 24 12z"/></svg>
    الدخول بفيسبوك (قريباً)</button>
+  <button id="gInstall" style="width:100%;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px;background:transparent;color:#f5c542;border:1px solid #f5c54288;border-radius:16px;padding:12px;font-size:15px;font-weight:700;cursor:pointer">📲 تثبيت التطبيق على الشاشة</button>
   <div id="gateErr" style="color:#fca5a5;font-size:13px;margin-top:14px;min-height:20px;line-height:1.6"></div>
  </div>
 </div>
+<script>
+(function(){ var dip=null; var standalone=function(){ return (window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone===true; };
+ window.addEventListener("beforeinstallprompt",function(e){ e.preventDefault(); dip=e; });
+ window.__install=function(){ if(standalone()){ alert("التطبيق مثبّت ويعمل كتطبيق."); return; }
+   if(dip){ dip.prompt(); dip=null; } else alert("لتثبيت التطبيق: اضغط ⋮ في أعلى المتصفح ثم اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية»."); };
+ var g=document.getElementById("gInstall"); if(g){ if(standalone()) g.style.display="none"; else g.onclick=window.__install; }
+ if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(){});
+})();
+</script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, FacebookAuthProvider, signInWithPopup, signInWithRedirect, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
