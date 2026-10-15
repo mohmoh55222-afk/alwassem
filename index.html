@@ -992,21 +992,27 @@ const hueOf=id=>{let h=0;for(const c of id)h=(h*31+c.charCodeAt(0))%360;return h
 const fmt=n=>n>=1e6?(n/1e6).toFixed(1)+"M":n>=1e3?(n/1e3).toFixed(1)+"K":String(n);
 const seatRef=i=>db.doc("rooms/"+room.id+"/seats/"+i);
 let unsubPres=null, presDocs=[], presFirst=true, presHB=null;
-const presLive=()=>presDocs.filter(p=>p.t>Date.now()-90000);
+let presSeen={};
+const presLive=()=>presDocs.filter(p=>{ const z=presSeen[p.uid]; return z&&Date.now()-z.seenAt<95000; });
+const fsErrShown={};
+window.__fsErr=function(path,e){ const c=(e&&e.code)||String(e); const k=String(path).split("/")[0]; if(fsErrShown[k]) return; fsErrShown[k]=1; try{ toast("خطأ بقاعدة البيانات ("+k+"): "+c); }catch(_){} };
 const presIn=rid=>presLive().filter(p=>p.room===rid);
 function entryBanner(n){ const b=el("div","entryb","✨ دخل "+n+" الغرفة"); document.body.append(b); setTimeout(()=>b.remove(),2000); }
 function startPres(){ if(unsubPres||!db) return;
-  unsubPres=db.collection("presence").onSnapshot(sn=>{ presDocs=sn.docs.map(d=>d.data());
-    if(!presFirst) sn.docChanges().forEach(c=>{ if(c.type!=="added") return; const q=c.doc.data(); if(room&&q.room===room.id&&q.uid!==uid&&Date.now()-q.t<20000) entryBanner(q.name||"مستخدم"); });
+  unsubPres=db.collection("presence").onSnapshot(sn=>{ presDocs=sn.docs.map(d=>d.data()); const now=Date.now();
+    presDocs.forEach(q=>{ const z=presSeen[q.uid];
+      if(!presFirst&&room&&q.room===room.id&&q.uid!==uid&&(!z||z.room!==q.room)) entryBanner(q.name||"مستخدم");
+      if(!z||z.t!==q.t||z.room!==q.room) presSeen[q.uid]={t:q.t,room:q.room,seenAt:now}; });
     presFirst=false; presPaint(); });
-  setInterval(presPaint,30000); }
+  setInterval(presPaint,15000); }
 function presPaint(){ document.querySelectorAll(".pc").forEach(x=>{ x.textContent=String(presIn(x.dataset.r).length); });
   const n=document.getElementById("pcnt"); if(n&&room) n.textContent=String(presIn(room.id).length);
   const sh=document.getElementById("pshl"); if(sh&&room) presFill(sh); }
-function presSet(){ if(!room||!uid) return; db.doc("presence/"+uid).set({uid:uid,name:prof.name||"",pid:prof.pid||0,room:room.id,t:Date.now()}).catch(()=>{}); }
+function presSet(){ if(!room||!uid) return; db.doc("presence/"+uid).set({uid:uid,name:prof.name||"",pid:prof.pid||0,room:room.id,t:Date.now()}).catch(e=>window.__fsErr("presence",e)); }
 function presOn(){ presSet(); clearInterval(presHB); presHB=setInterval(presSet,30000); }
 function presOff(){ clearInterval(presHB); presHB=null; if(uid&&db) db.doc("presence/"+uid).delete().catch(()=>{}); }
-window.addEventListener("pagehide",()=>{ if(room) presOff(); });
+window.addEventListener("pagehide",e=>{ if(room&&!e.persisted) presOff(); });
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&room) presOn(); });
 function presFill(L){ L.innerHTML=""; const arr=room?presIn(room.id):[]; if(!arr.length){ L.append(el("p","mut","لا أحد الآن")); return; }
   arr.forEach(q=>{ const P=PROFS[q.uid]||{}; const r=el("div","room"); const av=el("div","av"); av.style.cssText="width:40px;height:40px;font-size:20px"; setAv(av,P.emoji||"🙂",P.photo);
     const i=el("div"); i.append(el("b",null,q.name||P.name||"مستخدم"),el("div","mut","ID #"+(P.pid||q.pid||""))); r.append(frameWrap(av,P.frame,2),i); L.append(r); }); }
@@ -2469,7 +2475,7 @@ function makeDb(F,fs){
       set:async v=>F.setDoc(ref(),enc(v)),
       update:async v=>F.updateDoc(ref(),enc(v)),
       delete:async()=>F.deleteDoc(ref()),
-      onSnapshot:cb=>F.onSnapshot(ref(),s=>cb(snapDoc(s)),e=>console.warn("doc listener",path,e&&e.code||e)) }; };
+      onSnapshot:cb=>F.onSnapshot(ref(),s=>cb(snapDoc(s)),e=>{ console.warn("doc listener",path,e&&e.code||e); if(typeof window!=="undefined"&&window.__fsErr) window.__fsErr(path,e); }) }; };
   const EQ=o=>o==="=="||o==="in"||o==="array-contains";
   const cmp=(a,b)=>a<b?-1:a>b?1:0;
   const test=(x,c)=>{ const a=x[c.f], b=c.v; switch(c.op){ case "==":return a===b; case "!=":return a!==b; case "<":return a<b; case "<=":return a<=b; case ">":return a>b; case ">=":return a>=b;
@@ -2493,7 +2499,7 @@ function makeDb(F,fs){
         return F.onSnapshot(serverQuery(path,P),sn=>{ const rows=finish(P,sn.docs); let ch;
           if(P.client){ const ids=new Set(prev||[]); ch=rows.filter(r=>!ids.has(r.id)).map(r=>({type:"added",doc:r})); prev=rows.map(r=>r.id); }
           else ch=sn.docChanges().map(c=>({type:c.type,doc:{id:c.doc.id,data:()=>dec(c.doc.data())}}));
-          cb(result(rows,ch)); },e=>console.warn("query listener",path,e&&e.code||e)); } };
+          cb(result(rows,ch)); },e=>{ console.warn("query listener",path,e&&e.code||e); if(typeof window!=="undefined"&&window.__fsErr) window.__fsErr(path,e); }); } };
     return q; };
   return {doc:mkDoc,collection:p=>mkCol(p)};
 }
