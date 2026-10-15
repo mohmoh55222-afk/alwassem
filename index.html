@@ -1152,13 +1152,32 @@ let LOT=null;
 function loadLottie(){ if(window.lottie) return Promise.resolve(window.lottie);
   return LOT||(LOT=new Promise((res,rej)=>{ const sc=document.createElement("script"); sc.src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"; sc.onload=()=>res(window.lottie); sc.onerror=()=>{ LOT=null; rej(); }; document.head.append(sc); })); }
 function assetFx(w,ga){
-  const box=el("div","gfx-asset"); w.append(box); const url=ga.anim, isVid=(ga.type==="video")||/\.(webm|mp4|mov)(\?|$)/i.test(url||"");
-  if(isVid){ const v=document.createElement("video"); v.className="gfx-vid"; v.src=url; v.muted=true; v.playsInline=true; v.autoplay=true; v.setAttribute("playsinline",""); v.onended=()=>{ v.remove(); };
-    if(ga.blend==="screen"){ const bl=document.createElement("div"); bl.className="gfx-blend"; bl.append(v); document.body.append(bl); const kill=()=>{ bl.remove(); }; v.onended=kill; setTimeout(kill,((ga.dur||10)+3)*1000); }
-    else box.append(v);
-    try{ const pr=v.play&&v.play(); if(pr&&pr.catch) pr.catch(()=>{}); }catch(e){} return true; }
+  const box=el("div","gfx-asset"); w.append(box);
+  const url=String(ga.anim||"");
+  const isVid=(ga.type==="video")||/\.(?:webm|mp4|mov)(?:[?#].*)?$/i.test(url);
+  if(isVid){
+    const v=document.createElement("video"); v.className="gfx-vid"; v.src=url; v.muted=true; v.defaultMuted=true; v.playsInline=true; v.autoplay=true; v.preload="auto"; v.controls=false;
+    v.setAttribute("playsinline",""); v.setAttribute("webkit-playsinline",""); v.setAttribute("muted","");
+    if(w.classList.contains("t2")){ v.style.maxWidth="92vw"; v.style.maxHeight="76vh"; }
+    v.onerror=()=>{ box.classList.add("asset-error"); };
+    if(ga.blend==="screen"){
+      const bl=el("div","gfx-blend"); bl.append(v); document.body.append(bl);
+      const kill=()=>{ try{v.pause();}catch(e){} bl.remove(); };
+      v.onended=kill; setTimeout(kill,((Number(ga.dur)||10)+3)*1000);
+    } else {
+      box.append(v); v.onended=()=>{ try{v.pause();}catch(e){} v.remove(); };
+    }
+    try{ const pr=v.play&&v.play(); if(pr&&pr.catch) pr.catch(()=>{ /* Android may delay autoplay until the first tap */ }); }catch(e){}
+    return true;
+  }
   loadLottie().then(L=>{ if(!box.isConnected) return; L.loadAnimation({container:box,renderer:"svg",loop:false,autoplay:true,path:url}); }).catch(()=>{});
   return true;
+}
+function giftSvgThumb(g){
+  const emoji=String(g[0]||"🎁"), tier=Number(g[7]||0);
+  const colors=tier===2?["#ff6b6b","#5b0b20","#ffd166"]:tier===1?["#fff1a8","#9a5b08","#fff8d7"]:["#7dd3fc","#172554","#e0f2fe"];
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${colors[0]}"/><stop offset="1" stop-color="${colors[1]}"/></linearGradient><radialGradient id="gl"><stop stop-color="#fff" stop-opacity=".75"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><filter id="sh"><feGaussianBlur stdDeviation="5"/></filter></defs><rect x="8" y="8" width="224" height="224" rx="42" fill="#020617" opacity=".6"/><rect x="8" y="8" width="224" height="224" rx="42" fill="url(#bg)" stroke="${colors[2]}" stroke-width="3"/><circle cx="70" cy="55" r="70" fill="url(#gl)"/><circle cx="120" cy="124" r="67" fill="#fff" opacity=".12"/><path d="M35 180 Q120 220 205 180" fill="none" stroke="${colors[2]}" stroke-width="3" opacity=".7"/><g fill="#fff"><path d="M42 83 l4 10 10 4 -10 4 -4 10 -4 -10 -10 -4 10 -4z" opacity=".85"/><path d="M190 48 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z" opacity=".9"/><circle cx="190" cy="166" r="3"/><circle cx="54" cy="155" r="2.5"/></g><text x="120" y="153" font-size="94" text-anchor="middle" dominant-baseline="middle" style="filter:drop-shadow(0 8px 5px #0009)">${emoji}</text><path d="M34 207 Q120 228 206 207" fill="none" stroke="${colors[2]}" stroke-width="2" opacity=".6"/></svg>`;
+  return "data:image/svg+xml;charset=UTF-8,"+encodeURIComponent(svg);
 }
 let unsubGA=null;
 function watchGiftAssets(){ if(unsubGA) return; try{ unsubGA=db.doc("app/gift_assets").onSnapshot(sn=>{ GA=(sn.exists&&sn.data().items)||{}; }); }catch(e){} }
@@ -1228,11 +1247,11 @@ function openGifts(preUid){
     const ttl=el("div","gtitle"); ttl.append(el("span","gti","🎁"),el("b",null,TIERS[tier])); const sub=el("div","gsubt",TSUB[tier]);
     const gr=el("div","ggrid c"+TCOL[tier]);
     GIFTS.filter(g=>g[7]===tier).forEach(g=>{ const c=el("button","gcard2"+(pick===g?" on":"")), art=el("div","gart2"), ga=GA[g[6]], mk=g[5], th=(ga&&ga.thumb)?ga.thumb:(mk&&THUMBS[mk]);
-      if(th){ const im=el("img","gimg"); im.src=th; art.append(im); } else art.append(el("div","g3d",g[0]));
+      const im=el("img","gimg"); im.alt=g[1]; im.decoding="async"; im.src=th||giftSvgThumb(g); art.append(im);
       if(ga&&ga.anim) art.append(el("span","gasset","🎬"));
       const pr=el("div","gpr2"); pr.append(el("span","coin"),document.createTextNode(g[2].toLocaleString("en")));
       c.append(art,el("div","gnm2",g[1]),pr);
-      if(mk&&!th&&!thumbTried[mk]) makeThumb(mk).then(()=>{ if(document.body.contains(o)) draw(); });
+      if(mk&&!th&&!thumbTried[mk]) makeThumb(mk).then(()=>{ if(THUMBS[mk]&&document.body.contains(o)) draw(); });
       c.onclick=()=>{ pick=g; draw(); }; gr.append(c); });
     const tot=pick?pick[2]*qty*sel.size:0, bar=el("div","gbar2"), q=el("div","gqty"), snd=el("div","gsnd");
     [1,5,10,50].forEach(n=>{ const b=el("button","gq"+(qty===n?" on":""),"×"+n); b.onclick=()=>{ qty=n; draw(); }; q.append(b); });
@@ -1944,7 +1963,10 @@ function giftMove3D(w,gd,tier,dur,OPEN,emoji,fxk){
 }
 function giftFx(emoji,name,amt,from,nx){
   nx=nx||{}; const gd=findGift({gid:nx.gid,emoji:emoji,name:name}), tier=gd?gd[7]:(amt>=25000?2:amt>=1000?1:0), fxk=(gd&&gd[8])||"reveal", qty=nx.qty||1, ga=(gd&&GA[gd[6]]&&GA[gd[6]].anim)?GA[gd[6]]:null;
-  const OPEN=(fxk==="reveal"||fxk==="chest")?1.15:.4, trav=(fxk==="fly"||fxk==="drive"||fxk==="sail"); let dur=Math.max(tier===2?6:tier===1?4.4:3.2,trav?4.4:0)+(qty>1?.6:0); if(ga&&ga.dur) dur=ga.dur;
+  const OPEN=(fxk==="reveal"||fxk==="chest")?1.15:.4, trav=(fxk==="fly"||fxk==="drive"||fxk==="sail");
+  let dur=Math.max(tier===2?8.5:tier===1?5.2:3.8,trav?5.2:0)+(qty>1?.6:0);
+  const gaIsVideo=!!(ga&&ga.anim&&((ga.type==="video")||/\.(?:webm|mp4|mov)(?:[?#].*)?$/i.test(String(ga.anim))));
+  if(ga&&Number(ga.dur)>0) dur=Number(ga.dur); else if(gaIsVideo&&tier===2) dur=10;
   const dpr=Math.min(window.devicePixelRatio||1,2), W=innerWidth, H=innerHeight;
   const w=el("div","gfx t"+tier), cv=document.createElement("canvas"); cv.className="gfx-cv"; cv.width=W*dpr; cv.height=H*dpr; w.append(cv);
   if(tier>=1){ const bg=el("div","gfx-bg"); bg.style.setProperty("--gb",(gd&&gd[4])||"linear-gradient(160deg,#334155,#0f172a)"); bg.style.animationDuration=(dur+OPEN)+"s"; w.append(bg); }
