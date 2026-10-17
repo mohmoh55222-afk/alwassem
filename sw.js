@@ -1,4 +1,4 @@
-// AL WASEEM service worker: only makes the app installable. No caching, so updates always show immediately.
+// Tasliya service worker: only makes the app installable. No caching, so updates always show immediately.
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch',e=>{
