@@ -1,0 +1,194 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function me(uid) { return signedIn() && request.auth.uid == uid; }
+    function isOwner() {
+      return signedIn()
+        && request.auth.token.email == 'moh.moh55222@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+    function roomData(rid) { return get(/databases/$(database)/documents/rooms/$(rid)).data; }
+    function isRoomMod(rid) {
+      return signedIn() && (
+        roomData(rid).owner == request.auth.uid ||
+        ('admins' in roomData(rid) && request.auth.uid in roomData(rid).admins));
+    }
+
+    // Public profile: everyone signed in can read; only you can edit yours.
+    match /profiles/{uid} {
+      allow read: if signedIn();
+      allow create: if me(uid) && (request.resource.data.pid != 1 || isOwner());
+      allow update: if (me(uid) && request.resource.data.pid == resource.data.pid)
+                    || (signedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['topWeeks']));
+      allow delete: if me(uid);
+    }
+
+    // Private data (wallet, friends): only the owner of the account.
+    match /data/users/{uid}/{docId} {
+      allow read, write: if me(uid);
+      allow read: if isOwner();
+    }
+
+    // Rooms: only the room owner (or admins) can edit; only the owner can delete.
+    match /rooms/{rid} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.owner == request.auth.uid;
+      allow update: if signedIn()
+        && (resource.data.owner == request.auth.uid
+            || ('admins' in resource.data && request.auth.uid in resource.data.admins))
+        && request.resource.data.owner == resource.data.owner;
+      allow delete: if signedIn() && (resource.data.owner == request.auth.uid || isOwner());
+
+      match /msgs/{mid} {
+        allow read: if signedIn();
+        allow create: if signedIn() && request.resource.data.get('uid', request.auth.uid) == request.auth.uid;
+        allow delete: if signedIn() && (resource.data.get('uid', '') == request.auth.uid || isRoomMod(rid));
+      }
+      match /seats/{sid} {
+        allow read: if signedIn();
+        allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+        allow update: if signedIn() && request.resource.data.uid == resource.data.uid
+                      && (resource.data.uid == request.auth.uid || isRoomMod(rid));
+        allow delete: if signedIn() && (resource.data.uid == request.auth.uid || isRoomMod(rid));
+      }
+      match /kicks/{kid} {
+        allow read: if signedIn();
+        allow create, delete: if isRoomMod(rid);
+      }
+      match /log/{lid} {
+        allow read: if signedIn();
+        allow create: if signedIn();
+      }
+      // Room music clips (MP3 split into chunks): only the owner/admins can add or remove.
+      match /mtrk/{cid} {
+        allow read: if signedIn();
+        allow create, update, delete: if isRoomMod(rid);
+      }
+      match /tops/{tid} {
+        allow read: if signedIn();
+        allow create: if signedIn();
+      }
+      // Roulette: each player writes only their own entry; the round state is shared.
+      match /rlp/{pid} {
+        allow read: if signedIn();
+        allow write: if me(pid);
+      }
+      match /roulette/{sid} {
+        allow read, write: if signedIn();
+      }
+    }
+
+    // Friendship = one shared document per pair (both sides see it at once).
+    match /friendships/{fid} {
+      allow read: if signedIn() && request.auth.uid in resource.data.m;
+      allow create: if signedIn() && request.auth.uid in request.resource.data.m;
+      allow delete: if signedIn() && request.auth.uid in resource.data.m;
+    }
+
+    // Weekly Top: every supporter writes only their own running total (all rooms together).
+    match /topw/{id} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && request.resource.data.uid == request.auth.uid;
+    }
+
+    // News: only the app owner publishes; everyone can like (likes/nc fields only) and comment.
+    match /news/{id} {
+      allow read: if signedIn();
+      allow create, delete: if isOwner();
+      allow update: if isOwner()
+        || (signedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'nc']));
+    }
+    match /news_comments/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow update: if signedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes']);
+      allow delete: if signedIn() && (resource.data.uid == request.auth.uid || isOwner());
+    }
+
+    match /notifs/{uid}/items/{id} {
+      allow create: if signedIn();
+      allow read, update, delete: if me(uid);
+    }
+
+    match /bans/{uid} {
+      allow read: if me(uid) || isOwner();
+      allow write: if isOwner();
+    }
+
+    match /presence/{uid} {
+      allow read: if signedIn();
+      allow write: if me(uid);
+    }
+
+    match /gift_log/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+    }
+
+    match /tops_g/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn();
+    }
+
+    match /gifts_feed/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn();
+    }
+
+    // Points transfers: you can read/claim only what is addressed to you; the app account is the owner's.
+    match /credits/{id} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasAll(['to', 'amt', 'kind'])
+        && request.resource.data.amt is number;
+      allow read, delete: if signedIn()
+        && (resource.data.to == request.auth.uid
+            || (resource.data.to == '__app__' && isOwner()));
+    }
+
+    match /grants/{uid} {
+      allow read: if me(uid) || isOwner();
+      allow write: if isOwner();
+    }
+
+    match /requests/{id} {
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow read, delete: if isOwner();
+    }
+
+    match /tables/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.host == request.auth.uid;
+      allow update: if signedIn();
+      allow delete: if signedIn() && resource.data.host == request.auth.uid;
+    }
+
+    match /inbox/{uid}/threads/{tid} {
+      allow read: if me(uid) || isOwner();
+      allow write: if signedIn() && (request.auth.uid == uid || request.auth.uid == tid);
+    }
+
+    match /dms/{cid}/msgs/{mid} {
+      allow read: if isOwner();
+      allow read, write: if signedIn() && request.auth.uid in cid.split('_');
+    }
+
+    // Agents (charge dealers). The application (with the ID photo) is private: only the applicant and the app owner can read it.
+    match /agent_apps/{uid} {
+      allow read: if me(uid) || isOwner();
+      allow create: if me(uid) && request.resource.data.uid == request.auth.uid && request.resource.data.status == 'pending';
+      allow update, delete: if isOwner();
+    }
+    // Public agent listing (name, referral code, address, Telegram / WhatsApp): everyone reads, only the owner writes.
+    match /agents/{uid} {
+      allow read: if signedIn();
+      allow write: if isOwner();
+    }
+
+    match /app/{docId} {
+      allow read: if signedIn();
+      allow write: if isOwner();
+    }
+  }
+}
